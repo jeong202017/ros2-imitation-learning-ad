@@ -1,0 +1,53 @@
+# Experiment 1: Camera-Only Baseline Configuration
+# 실험 1: 카메라 전용 베이스라인 설정
+
+experiment:
+  name: "experiment1_camera_only"
+  description: "Baseline using front camera only"
+
+data:
+  camera_topic: /video1
+  control_topic: /Control/serial_data
+  control_indices:
+    speed: 3
+    steering: 4
+  image_size: [224, 224]
+  use_lidar: false
+  train_split: 0.8
+  val_split: 0.1
+  # test_split is automatically 1 - train_split - val_split = 0.1
+
+model:
+  type: cnn
+  backbone: resnet18
+  pretrained: true
+  output_dim: 2  # [speed, steering]
+  hidden_dim: 256
+  dropout: 0.3
+
+training:
+  batch_size: 32
+  epochs: 100
+  learning_rate: 0.001
+  optimizer: adam
+  weight_decay: 0.0001
+  lr_scheduler: step
+  lr_step_size: 30
+  lr_gamma: 0.1
+  early_stopping_patience: 15
+  gradient_clip: 1.0
+  save_interval: 10
+  num_workers: 4
+
+loss:
+  type: mse
+  
+augmentation:
+  enabled: true
+  horizontal_flip: 0.0  # Don't flip for driving
+  brightness: 0.2
+  contrast: 0.2
+  rotation: 0           # No rotation for driving
+  blur: 0.1
+
+device: cuda  # or cpu

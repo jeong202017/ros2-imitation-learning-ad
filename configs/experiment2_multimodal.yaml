@@ -1,0 +1,65 @@
+# Experiment 2: Camera + LiDAR Multimodal Configuration
+# 실험 2: 카메라 + LiDAR 멀티모달 설정
+
+experiment:
+  name: "experiment2_multimodal"
+  description: "Camera + LiDAR sensor fusion"
+
+data:
+  camera_topic: /video1
+  lidar_pointcloud: /velodyne_points_filtered
+  lidar_scan: /scan
+  control_topic: /Control/serial_data
+  control_indices:
+    speed: 3
+    steering: 4
+  image_size: [224, 224]
+  use_lidar: true
+  use_pointcloud: true
+  use_laserscan: true
+  max_points: 2048        # Maximum points to sample from point cloud
+  laserscan_bins: 360     # Number of bins for laser scan
+  train_split: 0.8
+  val_split: 0.1
+
+model:
+  type: multimodal
+  camera_encoder:
+    backbone: resnet18
+    pretrained: true
+    output_dim: 256
+  lidar_encoder:
+    type: pointnet_simple
+    output_dim: 256
+    hidden_dims: [512, 256]
+  laserscan_encoder:
+    type: cnn1d
+    output_dim: 128
+    hidden_dims: [256, 128]
+  fusion:
+    type: concatenate
+    hidden_dim: 512
+    dropout: 0.3
+  output_dim: 2  # [speed, steering]
+
+training:
+  batch_size: 16          # Smaller due to point clouds
+  epochs: 100
+  learning_rate: 0.001
+  optimizer: adam
+  weight_decay: 0.0001
+  lr_scheduler: step
+  lr_step_size: 30
+  lr_gamma: 0.1
+  early_stopping_patience: 15
+  gradient_clip: 1.0
+  save_interval: 10
+  num_workers: 4
+
+loss:
+  type: mse
+  
+augmentation:
+  enabled: false  # Disable for multimodal to keep sensor alignment
+
+device: cuda  # or cpu
