@@ -114,6 +114,137 @@ class LiDAREncoder(nn.Module):
         return self.encoder(x)
 
 
+class PointNetSimple(nn.Module):
+    """Simplified PointNet encoder for 3D point clouds.
+    
+    3D 포인트 클라우드를 위한 간소화된 PointNet 인코더.
+    
+    Processes unordered point sets with permutation invariance.
+    순서가 없는 포인트 집합을 순열 불변성으로 처리합니다.
+    
+    Args:
+        output_dim: Output feature dimension
+        hidden_dims: List of hidden layer dimensions
+    """
+    
+    def __init__(
+        self,
+        output_dim: int = 256,
+        hidden_dims: Tuple[int, ...] = (64, 128, 256),
+    ):
+        super().__init__()
+        
+        # Shared MLP for point features
+        layers = []
+        prev_dim = 3  # xyz coordinates
+        
+        for hidden_dim in hidden_dims:
+            layers.extend([
+                nn.Linear(prev_dim, hidden_dim),
+                nn.BatchNorm1d(hidden_dim),
+                nn.ReLU(),
+            ])
+            prev_dim = hidden_dim
+            
+        self.point_mlp = nn.Sequential(*layers)
+        
+        # Global feature aggregation
+        self.global_mlp = nn.Sequential(
+            nn.Linear(prev_dim, output_dim),
+            nn.BatchNorm1d(output_dim),
+            nn.ReLU(),
+        )
+        
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Forward pass with max pooling for permutation invariance.
+        
+        순열 불변성을 위한 max pooling을 사용한 순전파.
+        
+        Args:
+            x: Point cloud of shape (B, N, 3) where N is number of points
+            
+        Returns:
+            Global features of shape (B, output_dim)
+        """
+        batch_size, num_points, _ = x.shape
+        
+        # Reshape for shared MLP: (B*N, 3) -> (B*N, hidden_dim)
+        x = x.reshape(-1, 3)
+        x = self.point_mlp(x)
+        
+        # Reshape back and max pool over points
+        x = x.reshape(batch_size, num_points, -1)  # (B, N, hidden_dim)
+        x = torch.max(x, dim=1)[0]  # (B, hidden_dim) - max pooling
+        
+        # Global features
+        x = self.global_mlp(x)
+        
+        return x
+
+
+class LaserScanCNN1D(nn.Module):
+    """1D CNN encoder for laser scan data.
+    
+    레이저 스캔 데이터를 위한 1D CNN 인코더.
+    
+    Args:
+        input_dim: Input dimension (number of range readings)
+        output_dim: Output feature dimension
+        hidden_dims: List of channel dimensions
+    """
+    
+    def __init__(
+        self,
+        input_dim: int = 360,
+        output_dim: int = 128,
+        hidden_dims: Tuple[int, ...] = (64, 128, 256),
+    ):
+        super().__init__()
+        
+        layers = []
+        in_channels = 1  # Single channel for range values
+        
+        for hidden_dim in hidden_dims:
+            layers.extend([
+                nn.Conv1d(in_channels, hidden_dim, kernel_size=3, padding=1),
+                nn.BatchNorm1d(hidden_dim),
+                nn.ReLU(),
+                nn.MaxPool1d(kernel_size=2, stride=2),
+            ])
+            in_channels = hidden_dim
+            
+        self.conv_layers = nn.Sequential(*layers)
+        
+        # Calculate flattened size after conv layers
+        self.flatten_size = hidden_dims[-1] * (input_dim // (2 ** len(hidden_dims)))
+        
+        self.fc = nn.Sequential(
+            nn.Linear(self.flatten_size, output_dim),
+            nn.ReLU(),
+        )
+        
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Forward pass.
+        
+        Args:
+            x: Laser scan of shape (B, input_dim)
+            
+        Returns:
+            Features of shape (B, output_dim)
+        """
+        # Add channel dimension: (B, input_dim) -> (B, 1, input_dim)
+        x = x.unsqueeze(1)
+        
+        # Apply conv layers
+        x = self.conv_layers(x)
+        
+        # Flatten and apply FC
+        x = x.reshape(x.size(0), -1)
+        x = self.fc(x)
+        
+        return x
+
+
 class MultimodalPolicy(nn.Module):
     """Multimodal policy network with camera and LiDAR fusion.
     
