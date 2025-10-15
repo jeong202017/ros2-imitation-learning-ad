@@ -227,8 +227,9 @@ class MultimodalTrainer:
         
         for batch in pbar:
             # Move batch to device
-            batch = {k: v.to(self.device) for k, v in batch.items()}
-            controls = batch.pop("target")
+            batch_device = {k: v.to(self.device) for k, v in batch.items()}
+            controls = batch_device.pop("target")
+            batch = batch_device
             
             # Forward pass
             self.optimizer.zero_grad()
@@ -272,8 +273,9 @@ class MultimodalTrainer:
             
             for batch in pbar:
                 # Move batch to device
-                batch = {k: v.to(self.device) for k, v in batch.items()}
-                controls = batch.pop("target")
+                batch_device = {k: v.to(self.device) for k, v in batch.items()}
+                controls = batch_device.pop("target")
+                batch = batch_device
                 
                 # Forward pass
                 predictions = self.model(batch)
@@ -508,9 +510,10 @@ def main():
     
     # Create model
     logger.info("Creating multimodal model...")
-    # Add laserscan_bins to config for model creation
-    config["model"]["laserscan_bins"] = laserscan_bins
-    model = EnhancedMultimodalPolicy(config["model"])
+    # Create model config with laserscan_bins
+    model_config = config["model"].copy()
+    model_config["laserscan_bins"] = laserscan_bins
+    model = EnhancedMultimodalPolicy(model_config)
     logger.info(f"Model created with {sum(p.numel() for p in model.parameters())} parameters")
     
     # Create trainer

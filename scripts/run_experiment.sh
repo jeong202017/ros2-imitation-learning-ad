@@ -30,6 +30,8 @@ print_msg "${BLUE}" "========================================"
 echo ""
 
 # Configuration
+# Override these with environment variables, e.g., BAG_FILE=path/to/your.db3 ./run_experiment.sh
+# 환경 변수로 이를 재정의할 수 있습니다. 예: BAG_FILE=path/to/your.db3 ./run_experiment.sh
 BAG_FILE="${BAG_FILE:-data/rosbags/001_0.db3}"
 EPOCHS="${EPOCHS:-100}"
 DEVICE="${DEVICE:-cuda}"
