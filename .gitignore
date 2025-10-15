@@ -1,0 +1,48 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+*.egg-info/
+dist/
+build/
+
+# Data files
+data/rosbags/**/*.db3
+data/rosbags/**/*.db3-*
+data/extracted/
+data/processed/
+*.bag
+*.csv
+*.npy
+
+# Model files
+models/*.pth
+models/*.pt
+models/*.onnx
+
+# Logs
+logs/
+*.log
+tensorboard/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ROS
+install/
+build/
+log/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db

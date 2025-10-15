@@ -1,0 +1,33 @@
+# Training Configuration
+data:
+  input_topics:
+    - /camera/image_raw
+    - /scan
+  output_topic: /cmd_vel
+  sequence_length: 1
+  train_split: 0.8
+  val_split: 0.1
+
+model:
+  type: cnn
+  backbone: resnet18
+  pretrained: true
+  input_size: [224, 224]
+  output_dim: 2  # [linear_x, angular_z]
+  hidden_dim: 256
+
+training:
+  batch_size: 32
+  epochs: 100
+  learning_rate: 0.001
+  optimizer: adam
+  loss: mse
+  save_interval: 10
+  
+augmentation:
+  enabled: true
+  horizontal_flip: 0.5
+  brightness: 0.2
+  rotation: 5
+
+device: cuda  # or cpu
